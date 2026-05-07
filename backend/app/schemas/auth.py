@@ -21,12 +21,22 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
-class TokenPair(BaseModel):
+class SupabaseSession(BaseModel):
+    """Subset of the Supabase auth session returned to the client.
+
+    The frontend hands ``access_token`` back as a ``Bearer`` token on every
+    API call, and uses ``refresh_token`` against Supabase directly to rotate
+    sessions — the backend does not own refresh anymore.
+    """
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    expires_in: int
+    user_id: str
+    email: Optional[EmailStr] = None
 
 
 class UserOut(BaseModel):
     id: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
