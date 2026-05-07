@@ -195,6 +195,3 @@ For real GradCAM (rather than the forward-only approximation in this scaffold), 
 
 ---
 
-## Project layout
-
-See [docs/SUMMARY.md](docs/SUMMARY.md) for a full per-file walkthrough, design decisions, known limitations, and how the pieces map onto the SE / SDE / DL Researcher / DevOps stripes of the role.
