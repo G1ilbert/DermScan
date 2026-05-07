@@ -10,6 +10,7 @@ Pipeline for each scan job:
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models import Scan, ScanStatus
+from app.services.metrics import scan_confidence_histogram, scan_latency_seconds, scan_total
 from app.services.storage_service import download_bytes, upload_bytes
 from app.worker.inference import classify_band, run_inference as run_model
 
@@ -37,6 +39,7 @@ async def run_inference(ctx: dict, scan_id: str) -> dict[str, Any]:
 
         scan.status = ScanStatus.processing
         await db.commit()
+        started = time.monotonic()
 
         try:
             image_bytes = await download_bytes(scan.image_key)
@@ -55,6 +58,11 @@ async def run_inference(ctx: dict, scan_id: str) -> dict[str, Any]:
             }
             scan.status = ScanStatus.done
             await db.commit()
+
+            scan_total.labels(status="done").inc()
+            scan_confidence_histogram.observe(inference.confidence)
+            scan_latency_seconds.observe(time.monotonic() - started)
+
             return {
                 "ok": True,
                 "scan_id": scan.id,
@@ -66,6 +74,7 @@ async def run_inference(ctx: dict, scan_id: str) -> dict[str, Any]:
             scan.status = ScanStatus.failed
             scan.error_message = str(exc)[:1024]
             await db.commit()
+            scan_total.labels(status="failed").inc()
             return {"ok": False, "error": str(exc)}
 
 
