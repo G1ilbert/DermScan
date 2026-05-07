@@ -15,10 +15,8 @@ export default function HeatmapOverlay({ imageUrl, heatmapUrl }: Props) {
   return (
     <div className="mt-5">
       <div className="relative overflow-hidden rounded-xl border bg-slate-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageUrl} alt="Lesion" className="block w-full" />
         {heatmapUrl && showHeatmap && (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={heatmapUrl}
             alt="GradCAM heatmap"
