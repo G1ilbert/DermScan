@@ -47,8 +47,9 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://dermscan:dermscan@localhost:5432/dermscan_test
           REDIS_URL: redis://localhost:6379/0
-          JWT_SECRET_KEY: test-secret-key-do-not-use-in-prod
-          ENCRYPTION_KEY: dGVzdC1mZXJuZXQta2V5LWZvci1jaS1vbmx5LTEyMzQ1Njc4OQ==
+          SUPABASE_URL: https://test.supabase.co
+          SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
           R2_BUCKET: dermscan-test
         run: pytest -q
 
@@ -70,6 +71,8 @@ jobs:
       - run: npm run build
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          NEXT_PUBLIC_SUPABASE_URL: https://test.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
 
   docker:
     name: Build container images
