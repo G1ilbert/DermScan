@@ -1,6 +1,6 @@
 """ARQ worker tasks.
 
-The worker pipeline:
+Pipeline for each scan job:
   1. Mark scan as ``processing``
   2. Download original image from R2
   3. Preprocess + ONNX inference + GradCAM
@@ -20,12 +20,12 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.models import Scan, ScanStatus
 from app.services.storage_service import download_bytes, upload_bytes
-from app.worker.inference import classify_band, run_inference
+from app.worker.inference import classify_band, run_inference as run_model
 
 logger = logging.getLogger(__name__)
 
 
-async def run_inference_task(ctx: dict, scan_id: str) -> dict[str, Any]:
+async def run_inference(ctx: dict, scan_id: str) -> dict[str, Any]:
     """Process a single scan job. Errors are caught and persisted so a poisoned
     job never wedges the worker."""
     async with SessionLocal() as db:
@@ -40,7 +40,7 @@ async def run_inference_task(ctx: dict, scan_id: str) -> dict[str, Any]:
 
         try:
             image_bytes = await download_bytes(scan.image_key)
-            inference = run_inference(image_bytes)
+            inference = run_model(image_bytes)
 
             heatmap_key = f"users/{scan.user_id}/heatmaps/{uuid4().hex}.png"
             await upload_bytes(heatmap_key, inference.heatmap_png, content_type="image/png")
@@ -55,19 +55,18 @@ async def run_inference_task(ctx: dict, scan_id: str) -> dict[str, Any]:
             }
             scan.status = ScanStatus.done
             await db.commit()
-            return {"ok": True, "scan_id": scan.id, "confidence": inference.confidence, "band": classify_band(inference.confidence)}
+            return {
+                "ok": True,
+                "scan_id": scan.id,
+                "confidence": inference.confidence,
+                "band": classify_band(inference.confidence),
+            }
         except Exception as exc:
             logger.exception("inference failed for scan_id=%s", scan_id)
             scan.status = ScanStatus.failed
             scan.error_message = str(exc)[:1024]
             await db.commit()
             return {"ok": False, "error": str(exc)}
-
-
-# ARQ binds tasks by their function name. Provide an alias so the enqueuer can
-# call ``"run_inference"`` even though the implementation is named ``_task``.
-async def run_inference(ctx: dict, scan_id: str) -> dict[str, Any]:  # noqa: D401
-    return await run_inference_task(ctx, scan_id)
 
 
 class WorkerSettings:
