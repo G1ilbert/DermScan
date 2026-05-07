@@ -1,17 +1,20 @@
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import User
+from app.models import ScanStatus, User
 from app.schemas.auth import Envelope
 from app.schemas.scan import ScanCreated, ScanHistoryPage, ScanResult
 from app.services.auth_service import get_current_user
+from app.services.report_service import build_pdf
 from app.services.scan_service import (
     create_scan,
     get_history,
+    get_scan_by_id_for_user,
     get_scan_for_user,
     to_result,
 )
@@ -70,3 +73,22 @@ async def history(
     db: AsyncSession = Depends(get_db),
 ) -> Envelope[ScanHistoryPage]:
     return Envelope(success=True, data=await get_history(db, user.id, page, page_size), error=None)
+
+
+@router.get("/report/{scan_id}")
+async def report(
+    scan_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    scan = await get_scan_by_id_for_user(db, user.id, scan_id)
+    if scan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    if scan.status != ScanStatus.done:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Scan not finished")
+    pdf_bytes = await build_pdf(scan)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="dermscan-{scan_id}.pdf"'},
+    )
