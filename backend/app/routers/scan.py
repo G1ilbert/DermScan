@@ -10,6 +10,7 @@ from app.models import ScanStatus, User
 from app.schemas.auth import Envelope
 from app.schemas.scan import ScanCreated, ScanHistoryPage, ScanResult
 from app.services.auth_service import get_current_user
+from app.services.fhir_service import to_fhir_diagnostic_report
 from app.services.report_service import build_pdf
 from app.services.scan_service import (
     create_scan,
@@ -92,3 +93,19 @@ async def report(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="dermscan-{scan_id}.pdf"'},
     )
+
+
+@router.get("/fhir/{scan_id}")
+async def fhir_export(
+    scan_id: str,
+    include_image: bool = Query(False),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    scan = await get_scan_by_id_for_user(db, user.id, scan_id)
+    if scan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    resource = await to_fhir_diagnostic_report(scan, include_image=include_image)
+    import json
+
+    return Response(content=json.dumps(resource, indent=2), media_type="application/fhir+json")
