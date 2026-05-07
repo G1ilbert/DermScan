@@ -14,7 +14,6 @@ import logging
 import os
 import random
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 import numpy as np
 from PIL import Image
@@ -23,7 +22,7 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-CLASS_LABELS: List[str] = [
+CLASS_LABELS: list[str] = [
     "melanoma",
     "melanocytic_nevus",
     "basal_cell_carcinoma",
@@ -42,7 +41,7 @@ class InferenceResult:
     label: str
     label_index: int
     confidence: float
-    probabilities: List[float]
+    probabilities: list[float]
     heatmap_png: bytes
 
 
@@ -51,7 +50,7 @@ def _softmax(x: np.ndarray) -> np.ndarray:
     return e / e.sum()
 
 
-def preprocess(image_bytes: bytes, size: Optional[int] = None) -> Tuple[np.ndarray, Image.Image]:
+def preprocess(image_bytes: bytes, size: int | None = None) -> tuple[np.ndarray, Image.Image]:
     target = size or get_settings().model_input_size
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((target, target), Image.BILINEAR)
     arr = np.asarray(image, dtype=np.float32) / 255.0
@@ -84,7 +83,7 @@ def _load_session():
         return None
 
 
-def _mock_prediction(image: Image.Image) -> Tuple[np.ndarray, np.ndarray]:
+def _mock_prediction(image: Image.Image) -> tuple[np.ndarray, np.ndarray]:
     """Deterministic mock keyed by image content so repeated runs are stable."""
     h = abs(hash(image.tobytes())) % (2**32)
     rng = random.Random(h)

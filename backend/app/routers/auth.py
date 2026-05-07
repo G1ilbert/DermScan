@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,7 +57,10 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         result = await asyncio.to_thread(_signup)
     except Exception as exc:
         logger.warning("supabase signup failed: %s", _supabase_error_message(exc))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_supabase_error_message(exc))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_supabase_error_message(exc),
+        ) from exc
 
     user = getattr(result, "user", None)
     session = getattr(result, "session", None)
@@ -94,7 +96,10 @@ async def login(payload: LoginRequest) -> Envelope[SupabaseSession]:
         result = await asyncio.to_thread(_signin)
     except Exception as exc:
         logger.info("supabase login failed for %s", payload.email)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_supabase_error_message(exc))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=_supabase_error_message(exc),
+        ) from exc
 
     session = getattr(result, "session", None)
     if session is None:
@@ -131,7 +136,7 @@ async def me(user: User = Depends(get_current_user)) -> Envelope[UserOut]:
             return None
 
     info = await asyncio.to_thread(_fetch)
-    email: Optional[str] = None
+    email: str | None = None
     if info is not None and getattr(info, "user", None) is not None:
         email = getattr(info.user, "email", None)
     return Envelope(success=True, data=UserOut(id=user.id, email=email), error=None)

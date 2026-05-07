@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pytest
 
@@ -27,11 +27,22 @@ os.environ.setdefault("R2_BUCKET", "dermscan-test")
 os.environ.setdefault("MODEL_PATH", "/tmp/no-such-model.onnx")
 
 import pytest_asyncio  # noqa: E402
-
 from sqlalchemy.dialects.postgresql import JSONB, UUID  # noqa: E402
+from sqlalchemy.ext.compiler import compiles  # noqa: E402
 
-# Tell SQLAlchemy how to render PG-only types on SQLite.
-UUID.impl = lambda self, dialect=None: None  # type: ignore[assignment]
+
+# Tell SQLAlchemy how to render PG-only types on SQLite. Setting
+# ``__visit_name__`` on the class doesn't propagate in SQLAlchemy 2.x because
+# the per-class compiler dispatch is baked in at class creation time — so we
+# register dialect-specific compilers instead.
+@compiles(JSONB, "sqlite")
+def _jsonb_sqlite(type_, compiler, **kw):  # noqa: ARG001
+    return "JSON"
+
+
+@compiles(UUID, "sqlite")
+def _uuid_sqlite(type_, compiler, **kw):  # noqa: ARG001
+    return "CHAR(36)"
 
 
 # --------------------------------------------------------------------------
@@ -126,8 +137,6 @@ async def app_client() -> AsyncIterator:
     from app import database
     from app.database import Base
     from app.main import app
-
-    JSONB.__visit_name__ = "JSON"  # type: ignore[attr-defined]
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)

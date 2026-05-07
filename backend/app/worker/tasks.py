@@ -22,7 +22,8 @@ from app.database import SessionLocal
 from app.models import Scan, ScanStatus
 from app.services.metrics import scan_confidence_histogram, scan_latency_seconds, scan_total
 from app.services.storage_service import download_bytes, upload_bytes
-from app.worker.inference import classify_band, run_inference as run_model
+from app.worker.inference import classify_band
+from app.worker.inference import run_inference as run_model
 
 logger = logging.getLogger(__name__)
 

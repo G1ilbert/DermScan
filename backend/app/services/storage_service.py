@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import asyncio
 from functools import lru_cache
-from typing import Optional
 
 import boto3
 from botocore.client import Config
@@ -49,7 +48,7 @@ async def download_bytes(key: str) -> bytes:
     return await loop.run_in_executor(None, _get)
 
 
-async def presign_get(key: str, expires_in: int = 3600) -> Optional[str]:
+async def presign_get(key: str, expires_in: int = 3600) -> str | None:
     if not key:
         return None
     settings = get_settings()

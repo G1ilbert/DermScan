@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -64,7 +63,7 @@ async def _get_or_create_local_user(db: AsyncSession, user_id: str) -> User:
 
 async def get_current_user(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     if credentials is None or credentials.scheme.lower() != "bearer":

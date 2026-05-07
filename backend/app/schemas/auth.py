@@ -1,4 +1,4 @@
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -7,8 +7,8 @@ T = TypeVar("T")
 
 class Envelope(BaseModel, Generic[T]):
     success: bool
-    data: Optional[T] = None
-    error: Optional[str] = None
+    data: T | None = None
+    error: str | None = None
 
 
 class RegisterRequest(BaseModel):
@@ -34,9 +34,9 @@ class SupabaseSession(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user_id: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
 
 
 class UserOut(BaseModel):
     id: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None

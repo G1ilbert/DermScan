@@ -8,14 +8,13 @@ code so the resource validates against any FHIR R4 server.
 from __future__ import annotations
 
 import base64
-from datetime import timezone
-from typing import Any, Dict, Optional
+from datetime import UTC
+from typing import Any
 
 from app.models import Scan, ScanStatus
 from app.services.storage_service import download_bytes
 
-
-_LABEL_TO_SNOMED: Dict[str, Dict[str, str]] = {
+_LABEL_TO_SNOMED: dict[str, dict[str, str]] = {
     "melanoma": {"code": "372244006", "display": "Malignant melanoma"},
     "melanocytic_nevus": {"code": "400182000", "display": "Melanocytic nevus"},
     "basal_cell_carcinoma": {"code": "275265005", "display": "Basal cell carcinoma"},
@@ -26,7 +25,7 @@ _LABEL_TO_SNOMED: Dict[str, Dict[str, str]] = {
 }
 
 
-async def to_fhir_diagnostic_report(scan: Scan, include_image: bool = False) -> Dict[str, Any]:
+async def to_fhir_diagnostic_report(scan: Scan, include_image: bool = False) -> dict[str, Any]:
     prediction = scan.prediction or {}
     label = prediction.get("label")
     band = prediction.get("band")
@@ -61,7 +60,7 @@ async def to_fhir_diagnostic_report(scan: Scan, include_image: bool = False) -> 
         )
 
     issued = scan.updated_at or scan.created_at
-    issued_iso = issued.astimezone(timezone.utc).isoformat() if issued else None
+    issued_iso = issued.astimezone(UTC).isoformat() if issued else None
 
     presented_form = []
     if include_image and scan.image_key:
@@ -114,7 +113,7 @@ async def to_fhir_diagnostic_report(scan: Scan, include_image: bool = False) -> 
     }
 
 
-def confidence_band(confidence: Optional[float], high: float, low: float) -> Optional[str]:
+def confidence_band(confidence: float | None, high: float, low: float) -> str | None:
     if confidence is None:
         return None
     if confidence >= high:

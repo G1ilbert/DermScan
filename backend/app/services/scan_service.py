@@ -1,7 +1,6 @@
 """Scan-domain logic: enqueue jobs to ARQ, fetch results, paginate history."""
 from __future__ import annotations
 
-from typing import Optional
 from uuid import uuid4
 
 from arq import create_pool
@@ -19,7 +18,7 @@ def _redis_settings() -> RedisSettings:
     return RedisSettings.from_dsn(get_settings().redis_url)
 
 
-def _classify_band(confidence: Optional[float]) -> Optional[str]:
+def _classify_band(confidence: float | None) -> str | None:
     if confidence is None:
         return None
     settings = get_settings()
@@ -45,12 +44,12 @@ async def create_scan(db: AsyncSession, user_id: str, image_key: str) -> Scan:
     return scan
 
 
-async def get_scan_for_user(db: AsyncSession, user_id: str, job_id: str) -> Optional[Scan]:
+async def get_scan_for_user(db: AsyncSession, user_id: str, job_id: str) -> Scan | None:
     result = await db.execute(select(Scan).where(Scan.job_id == job_id, Scan.user_id == user_id))
     return result.scalar_one_or_none()
 
 
-async def get_scan_by_id_for_user(db: AsyncSession, user_id: str, scan_id: str) -> Optional[Scan]:
+async def get_scan_by_id_for_user(db: AsyncSession, user_id: str, scan_id: str) -> Scan | None:
     result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.user_id == user_id))
     return result.scalar_one_or_none()
 

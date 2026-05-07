@@ -3,7 +3,6 @@ import io
 import pytest
 from PIL import Image
 
-
 pytestmark = pytest.mark.asyncio
 
 

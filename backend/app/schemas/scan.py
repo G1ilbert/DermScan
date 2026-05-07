@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -14,26 +14,26 @@ class ScanResult(BaseModel):
     job_id: str
     scan_id: str
     status: str
-    confidence: Optional[float] = None
-    prediction: Optional[dict[str, Any]] = None
-    image_url: Optional[str] = None
-    heatmap_url: Optional[str] = None
-    confidence_band: Optional[str] = None  # "result" | "uncertain" | "low_quality"
-    error_message: Optional[str] = None
-    created_at: Optional[datetime] = None
+    confidence: float | None = None
+    prediction: dict[str, Any] | None = None
+    image_url: str | None = None
+    heatmap_url: str | None = None
+    confidence_band: str | None = None  # "result" | "uncertain" | "low_quality"
+    error_message: str | None = None
+    created_at: datetime | None = None
 
 
 class ScanHistoryItem(BaseModel):
     scan_id: str
     job_id: str
     status: str
-    confidence: Optional[float] = None
-    confidence_band: Optional[str] = None
+    confidence: float | None = None
+    confidence_band: str | None = None
     created_at: datetime
 
 
 class ScanHistoryPage(BaseModel):
-    items: List[ScanHistoryItem]
+    items: list[ScanHistoryItem]
     page: int
     page_size: int
     total: int
