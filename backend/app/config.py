@@ -17,12 +17,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://dermscan:dermscan@postgres:5432/dermscan"
     redis_url: str = "redis://redis:6379/0"
 
-    jwt_secret_key: str = "change-me"
-    jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 15
-    jwt_refresh_token_expire_days: int = 7
-
-    encryption_key: str = ""
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
 
     r2_endpoint_url: str = ""
     r2_access_key_id: str = ""
