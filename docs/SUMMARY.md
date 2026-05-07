@@ -160,3 +160,114 @@ hitting repeated OOM and API-mismatch issues.
 - CI/CD pipeline is green after the fixes above: backend lint+test,
   frontend lint+build, Docker image build, and the deploy gate all pass on
   `main`.
+
+---
+
+## Frontend Upgrade (Next.js 16 + React 19)
+
+Major framework bump landed in [`0879b89`](https://github.com/G1ilbert/DermScan/commit/0879b89) along with the Cloudflare R2 → Supabase Storage migration in [`ba8bf6c`](https://github.com/G1ilbert/DermScan/commit/ba8bf6c).
+
+### Version bumps
+
+| Package              | From     | To       |
+| -------------------- | -------- | -------- |
+| `next`               | 14.2.5   | 16.2.5   |
+| `react`              | 18.3.1   | 19.2.6   |
+| `react-dom`          | 18.3.1   | 19.2.6   |
+| `eslint-config-next` | 14.2.5   | 16.2.5   |
+| `@types/react`       | 18.3.3   | 19.2.14  |
+| `@types/react-dom`   | 18.3.0   | 19.2.3   |
+| `eslint`             | 8.57.0   | 9.39.4   |
+
+Next 16 enables Turbopack for the production build by default — no
+config change needed; `npm run build` switched compilers transparently.
+
+### ESLint flat-config migration
+
+`eslint-config-next@16` ships a flat config and peer-depends on
+ESLint ≥9, which forced two coupled changes:
+
+- Legacy [`frontend/.eslintrc.json`](../frontend/.eslintrc.json) deleted; replaced with
+  [`frontend/eslint.config.mjs`](../frontend/eslint.config.mjs) that imports
+  `eslint-config-next/core-web-vitals` directly. The custom
+  `@next/next/no-img-element: off` override moved into the flat config's
+  rules block.
+- ESLint 9's CLI removed `--ext`, so the npm `lint` script changed
+  from `eslint . --ext .ts,.tsx` to plain `eslint .`. File globs now
+  live in the flat config (`files: ["**/*.{ts,tsx}"]`).
+
+Two unused inline `// eslint-disable-next-line @next/next/no-img-element`
+comments in `components/HeatmapOverlay.tsx` were removed since the rule
+is disabled globally now.
+
+### ESLint 10 attempted, rolled back to 9.39.4
+
+First pinned ESLint to the latest (10.3.0). The lint run crashed
+inside `eslint-plugin-react`:
+
+```
+TypeError: Error while loading rule 'react/display-name':
+contextOrFilename.getFilename is not a function
+  at resolveBasedir (.../eslint-plugin-react/lib/util/version.js:31:100)
+  at detectReactVersion (.../eslint-plugin-react/lib/util/version.js:85:19)
+```
+
+ESLint 10 dropped `context.getFilename()` in favor of `context.filename`
+and the version of `eslint-plugin-react` pulled in transitively by
+`eslint-config-next@16` hasn't shipped the migration yet. Pinned to
+ESLint 9.39.4 — the latest 9.x line — where Next 16's plugin chain is
+tested.
+
+### Storage backend
+
+Done in [`ba8bf6c`](https://github.com/G1ilbert/DermScan/commit/ba8bf6c) — Cloudflare R2 (boto3 / S3) is gone. Both buckets
+now live in Supabase Storage:
+
+- `scans` (private) — original uploaded images
+- `heatmaps` (private) — GradCAM heatmaps written by the worker
+
+`storage_service` rewritten around the Supabase Python client; the
+interface picks up an explicit `bucket` argument:
+
+```python
+await upload(bucket, key, data, content_type=...)
+await download(bucket, key)
+await presign_get(bucket, key, expires_in=3600)
+```
+
+`SCANS_BUCKET` / `HEATMAPS_BUCKET` constants are exported from the
+service so callers don't hardcode the strings. The `R2_*` env var
+surface, the `boto3` / `botocore` deps, and the `R2_BUCKET` test env
+in CI all dropped.
+
+### Verification
+
+- `npm run lint` — 0 warnings, 0 errors.
+- `npm run build` — compiled clean via Turbopack, all 7 routes
+  prerendered:
+  ```
+  ┌ ○ /
+  ├ ○ /_not-found
+  ├ ○ /history
+  ├ ○ /login
+  ├ ○ /register
+  ├ ○ /scan
+  └ ƒ /scan/result/[jobId]
+  ```
+  (○ static, ƒ dynamic — only the per-job result page is server-rendered
+  on demand, which is the intended shape.)
+- Backend `pytest -q` — 16 passed after the storage interface change;
+  conftest stubs were updated to the new `(bucket, key)` signature.
+
+### Mandatory tsconfig + next-env.d.ts edits
+
+Next 16 made non-optional changes to two files on first build:
+
+- [`frontend/tsconfig.json`](../frontend/tsconfig.json): `jsx` flipped from
+  `"preserve"` to `"react-jsx"` (required under Next 16); added
+  `.next/types/**/*.ts` and `.next/dev/types/**/*.ts` to `include` for
+  typed routes.
+- [`frontend/next-env.d.ts`](../frontend/next-env.d.ts): added
+  `import "./.next/types/routes.d.ts"` for the typed-routes feature.
+
+Both committed alongside the framework bump.
