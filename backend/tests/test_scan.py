@@ -66,3 +66,11 @@ async def test_get_result_404_for_unknown_job(app_client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 404
+
+
+async def test_invalid_token_rejected(app_client):
+    r = await app_client.get(
+        "/scan/history",
+        headers={"Authorization": "Bearer not-a-real-supabase-token"},
+    )
+    assert r.status_code == 401
