@@ -19,7 +19,7 @@ from app.services.scan_service import (
     get_scan_for_user,
     to_result,
 )
-from app.services.storage_service import upload_bytes
+from app.services.storage_service import SCANS_BUCKET, upload
 
 router = APIRouter(prefix="/scan", tags=["scan"])
 
@@ -43,8 +43,8 @@ async def submit_scan(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty upload")
 
     suffix = "jpg" if file.content_type == "image/jpeg" else "png"
-    key = f"users/{user.id}/scans/{uuid4().hex}.{suffix}"
-    await upload_bytes(key, data, content_type=file.content_type)
+    key = f"users/{user.id}/{uuid4().hex}.{suffix}"
+    await upload(SCANS_BUCKET, key, data, content_type=file.content_type)
 
     scan = await create_scan(db, user.id, key)
     return Envelope(

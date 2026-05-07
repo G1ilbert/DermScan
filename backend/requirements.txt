@@ -7,8 +7,6 @@ asyncpg==0.29.0
 alembic==1.13.2
 arq==0.26.1
 redis==5.0.7
-boto3==1.34.144
-botocore==1.34.144
 supabase==2.7.4
 cryptography==42.0.8
 python-multipart==0.0.9

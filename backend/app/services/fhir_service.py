@@ -12,7 +12,7 @@ from datetime import UTC
 from typing import Any
 
 from app.models import Scan, ScanStatus
-from app.services.storage_service import download_bytes
+from app.services.storage_service import SCANS_BUCKET, download
 
 _LABEL_TO_SNOMED: dict[str, dict[str, str]] = {
     "melanoma": {"code": "372244006", "display": "Malignant melanoma"},
@@ -65,7 +65,7 @@ async def to_fhir_diagnostic_report(scan: Scan, include_image: bool = False) -> 
     presented_form = []
     if include_image and scan.image_key:
         try:
-            image_bytes = await download_bytes(scan.image_key)
+            image_bytes = await download(SCANS_BUCKET, scan.image_key)
             presented_form.append(
                 {
                     "contentType": "image/jpeg",

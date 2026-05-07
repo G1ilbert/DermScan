@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.models import Scan, ScanStatus
 from app.schemas.scan import ScanHistoryItem, ScanHistoryPage, ScanResult
-from app.services.storage_service import presign_get
+from app.services.storage_service import HEATMAPS_BUCKET, SCANS_BUCKET, presign_get
 
 
 def _redis_settings() -> RedisSettings:
@@ -55,8 +55,8 @@ async def get_scan_by_id_for_user(db: AsyncSession, user_id: str, scan_id: str) 
 
 
 async def to_result(scan: Scan) -> ScanResult:
-    image_url = await presign_get(scan.image_key) if scan.image_key else None
-    heatmap_url = await presign_get(scan.heatmap_key) if scan.heatmap_key else None
+    image_url = await presign_get(SCANS_BUCKET, scan.image_key) if scan.image_key else None
+    heatmap_url = await presign_get(HEATMAPS_BUCKET, scan.heatmap_key) if scan.heatmap_key else None
     return ScanResult(
         job_id=scan.job_id,
         scan_id=scan.id,

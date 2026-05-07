@@ -2,9 +2,9 @@
 
 Pipeline for each scan job:
   1. Mark scan as ``processing``
-  2. Download original image from R2
+  2. Download original image from Supabase Storage (``scans`` bucket)
   3. Preprocess + ONNX inference + GradCAM
-  4. Upload heatmap PNG to R2
+  4. Upload heatmap PNG to Supabase Storage (``heatmaps`` bucket)
   5. Persist prediction + confidence + status=done
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.models import Scan, ScanStatus
 from app.services.metrics import scan_confidence_histogram, scan_latency_seconds, scan_total
-from app.services.storage_service import download_bytes, upload_bytes
+from app.services.storage_service import HEATMAPS_BUCKET, SCANS_BUCKET, download, upload
 from app.worker.inference import classify_band
 from app.worker.inference import run_inference as run_model
 
@@ -43,11 +43,11 @@ async def run_inference(ctx: dict, scan_id: str) -> dict[str, Any]:
         started = time.monotonic()
 
         try:
-            image_bytes = await download_bytes(scan.image_key)
+            image_bytes = await download(SCANS_BUCKET, scan.image_key)
             inference = run_model(image_bytes)
 
-            heatmap_key = f"users/{scan.user_id}/heatmaps/{uuid4().hex}.png"
-            await upload_bytes(heatmap_key, inference.heatmap_png, content_type="image/png")
+            heatmap_key = f"users/{scan.user_id}/{uuid4().hex}.png"
+            await upload(HEATMAPS_BUCKET, heatmap_key, inference.heatmap_png, content_type="image/png")
 
             scan.heatmap_key = heatmap_key
             scan.confidence = inference.confidence

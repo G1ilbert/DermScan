@@ -19,12 +19,6 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
 
-    r2_endpoint_url: str = ""
-    r2_access_key_id: str = ""
-    r2_secret_access_key: str = ""
-    r2_bucket: str = "dermscan-images"
-    r2_region: str = "auto"
-
     model_path: str = "/models/dermscan.onnx"
     model_input_size: int = 380
     confidence_threshold_high: float = 0.90

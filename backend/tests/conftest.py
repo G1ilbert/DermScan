@@ -2,7 +2,7 @@
 
 We swap the production async engine for an in-memory SQLite DB and stub the
 storage, queue, and Supabase clients so unit tests never need real
-Postgres / Redis / R2 / Supabase.
+Postgres / Redis / Supabase Storage / Supabase Auth.
 
 The Postgres-specific column types (UUID, JSONB, ENUM) are remapped to
 SQLite-friendly equivalents inside the fixture so the same SQLAlchemy models
@@ -23,7 +23,6 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
-os.environ.setdefault("R2_BUCKET", "dermscan-test")
 os.environ.setdefault("MODEL_PATH", "/tmp/no-such-model.onnx")
 
 import pytest_asyncio  # noqa: E402
@@ -157,17 +156,17 @@ async def app_client() -> AsyncIterator:
 async def _stub_external_services(monkeypatch):
     from app.services import scan_service, storage_service, supabase_client
 
-    async def _upload(key, data, content_type="application/octet-stream"):
+    async def _upload(bucket, key, data, content_type="application/octet-stream"):
         return key
 
-    async def _download(key):
+    async def _download(bucket, key):
         return b""
 
-    async def _presign(key, expires_in=3600):
-        return f"https://signed.example/{key}" if key else None
+    async def _presign(bucket, key, expires_in=3600):
+        return f"https://signed.example/{bucket}/{key}" if key else None
 
-    monkeypatch.setattr(storage_service, "upload_bytes", _upload)
-    monkeypatch.setattr(storage_service, "download_bytes", _download)
+    monkeypatch.setattr(storage_service, "upload", _upload)
+    monkeypatch.setattr(storage_service, "download", _download)
     monkeypatch.setattr(storage_service, "presign_get", _presign)
 
     class _FakePool:

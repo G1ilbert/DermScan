@@ -1,64 +1,67 @@
-"""Cloudflare R2 storage helpers (S3-compatible via boto3).
+"""Supabase Storage helpers.
 
-Boto3 is sync-only, so we hand off to a default thread executor so the rest
-of the FastAPI request can stay on the event loop.
+Replaces the previous Cloudflare R2 (S3-compatible via boto3) backend. The
+Supabase Python client is sync-only, so we hand off to a default thread
+executor and keep the FastAPI request on the event loop.
+
+Interface:
+    await upload(bucket, key, data, content_type=...)
+    await download(bucket, key)
+    await presign_get(bucket, key, expires_in=3600)
+
+Buckets are passed in by the caller — see ``SCANS_BUCKET`` and
+``HEATMAPS_BUCKET`` below for the canonical names. Both buckets must
+exist in Supabase Storage and should be configured as **private**; access
+is brokered through short-lived signed URLs minted by ``presign_get``.
 """
 from __future__ import annotations
 
 import asyncio
-from functools import lru_cache
 
-import boto3
-from botocore.client import Config
+from app.services.supabase_client import service_client
 
-from app.config import get_settings
-
-
-@lru_cache
-def _client():
-    settings = get_settings()
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.r2_endpoint_url or None,
-        aws_access_key_id=settings.r2_access_key_id or None,
-        aws_secret_access_key=settings.r2_secret_access_key or None,
-        region_name=settings.r2_region,
-        config=Config(signature_version="s3v4"),
-    )
+SCANS_BUCKET = "scans"
+HEATMAPS_BUCKET = "heatmaps"
 
 
-async def upload_bytes(key: str, data: bytes, content_type: str = "application/octet-stream") -> str:
-    settings = get_settings()
-    loop = asyncio.get_running_loop()
+def _bucket(name: str):
+    return service_client().storage.from_(name)
 
-    def _put():
-        _client().put_object(Bucket=settings.r2_bucket, Key=key, Body=data, ContentType=content_type)
+
+async def upload(
+    bucket: str,
+    key: str,
+    data: bytes,
+    content_type: str = "application/octet-stream",
+) -> str:
+    def _put() -> str:
+        _bucket(bucket).upload(
+            path=key,
+            file=data,
+            file_options={"content-type": content_type, "upsert": "false"},
+        )
         return key
 
-    return await loop.run_in_executor(None, _put)
+    return await asyncio.to_thread(_put)
 
 
-async def download_bytes(key: str) -> bytes:
-    settings = get_settings()
-    loop = asyncio.get_running_loop()
+async def download(bucket: str, key: str) -> bytes:
+    def _get() -> bytes:
+        return _bucket(bucket).download(key)
 
-    def _get():
-        return _client().get_object(Bucket=settings.r2_bucket, Key=key)["Body"].read()
-
-    return await loop.run_in_executor(None, _get)
+    return await asyncio.to_thread(_get)
 
 
-async def presign_get(key: str, expires_in: int = 3600) -> str | None:
+async def presign_get(bucket: str, key: str, expires_in: int = 3600) -> str | None:
     if not key:
         return None
-    settings = get_settings()
-    loop = asyncio.get_running_loop()
 
-    def _sign():
-        return _client().generate_presigned_url(
-            "get_object",
-            Params={"Bucket": settings.r2_bucket, "Key": key},
-            ExpiresIn=expires_in,
-        )
+    def _sign() -> str | None:
+        result = _bucket(bucket).create_signed_url(key, expires_in)
+        # storage3 has switched between camelCase and snake_case across
+        # versions; accept either.
+        if isinstance(result, dict):
+            return result.get("signedURL") or result.get("signed_url")
+        return getattr(result, "signedURL", None) or getattr(result, "signed_url", None)
 
-    return await loop.run_in_executor(None, _sign)
+    return await asyncio.to_thread(_sign)

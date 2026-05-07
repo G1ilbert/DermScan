@@ -12,7 +12,7 @@ from fpdf import FPDF
 from PIL import Image
 
 from app.models import Scan
-from app.services.storage_service import download_bytes
+from app.services.storage_service import HEATMAPS_BUCKET, SCANS_BUCKET, download
 
 DISCLAIMER = (
     "DermScan provides AI-assisted screening only and is NOT a medical diagnosis. "
@@ -28,11 +28,11 @@ def _band_color(band: str | None) -> tuple[int, int, int]:
     }.get(band or "", (33, 37, 41))
 
 
-async def _fetch_image_jpeg(key: str) -> bytes | None:
+async def _fetch_image_jpeg(bucket: str, key: str) -> bytes | None:
     if not key:
         return None
     try:
-        raw = await download_bytes(key)
+        raw = await download(bucket, key)
         img = Image.open(io.BytesIO(raw)).convert("RGB")
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
@@ -42,8 +42,12 @@ async def _fetch_image_jpeg(key: str) -> bytes | None:
 
 
 async def build_pdf(scan: Scan) -> bytes:
-    image_bytes = await _fetch_image_jpeg(scan.image_key)
-    heatmap_bytes = await _fetch_image_jpeg(scan.heatmap_key) if scan.heatmap_key else None
+    image_bytes = await _fetch_image_jpeg(SCANS_BUCKET, scan.image_key)
+    heatmap_bytes = (
+        await _fetch_image_jpeg(HEATMAPS_BUCKET, scan.heatmap_key)
+        if scan.heatmap_key
+        else None
+    )
 
     pdf = FPDF(format="A4")
     pdf.add_page()
