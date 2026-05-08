@@ -7,16 +7,7 @@ Production-grade AI skin lesion screening web app. Users upload a photo of a ski
 ---
 
 ## Model Versions
-
-See all model versions and changelogs in [GitHub Releases](https://github.com/G1ilbert/DermScan/releases).
-
-Latest:
-
-| Version | Architecture    | Image Size | AUC    | Accuracy | Melanoma Recall | Epochs          | Key Changes                                                                              |
-| ------- | --------------- | ---------- | ------ | -------- | --------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| v1.0    | EfficientNet-B4 | 224×224    | 0.9316 | 90%      | 79%             | 14 (early stop) | Initial training, AdamW lr=1e-4→5e-5 resume, pos_weight=4.60, Mixup α=0.4, patience=6    |
-
-Download the latest `dermscan.onnx` from the release assets and place it in `models/`.
+See all model versions, specs, and download links in [GitHub Releases](https://github.com/G1ilbert/DermScan/releases).
 
 ---
 
