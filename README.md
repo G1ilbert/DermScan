@@ -4,45 +4,13 @@ Production-grade AI skin lesion screening web app. Users upload a photo of a ski
 
 ---
 
-## Architecture
+## Model Versions
 
-```
-                +--------------------+
-                |   Next.js 14       |
-                |   (App Router)     |
-                +----------+---------+
-                           | HTTPS / JSON
-                           v
-                +----------+---------+        +--------------------+
-                |   FastAPI (async)  |<------>|  PostgreSQL        |
-                |  - /auth           |        |  users, scans,     |
-                |  - /scan           |        |  audit_logs        |
-                |  - /metrics        |        +--------------------+
-                +----------+---------+
-                  |        |        |
-        upload    |        |        | enqueue
-        original  v        v        v
-              +-------+   +---+   +-----+
-              |  R2   |   |Pro|   |Redis|
-              | image |   |meth|  | ARQ |
-              | bucket|   |eus |  |queue|
-              +-------+   +---+   +--+--+
-                                     |
-                                     v
-                          +----------+---------+
-                          |   ARQ worker       |
-                          |  ONNX Runtime +    |
-                          |  GradCAM heatmap   |
-                          +----------+---------+
-                                     |
-                            heatmap upload to R2
-                            + DB write (status=done)
-```
+| Version | Architecture    | Image Size | AUC    | Accuracy | Melanoma Recall | Epochs          | Key Changes                                                                              |
+| ------- | --------------- | ---------- | ------ | -------- | --------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| v1.0    | EfficientNet-B4 | 224×224    | 0.9316 | 90%      | 79%             | 14 (early stop) | Initial training, AdamW lr=1e-4→5e-5 resume, pos_weight=4.60, Mixup α=0.4, patience=6    |
 
-- **Confidence gate** — every prediction is bucketed: `>= 0.90 → result`, `0.70–0.89 → uncertain`, `< 0.70 → low_quality`. Raw probabilities are never returned without this gate.
-- **PII at rest** — user emails are stored using a Fernet-encrypted column. A separate SHA-256 lookup hash supports unique-email enforcement and login without ever decrypting the table.
-- **Audit log** — every request to a non-`/health` / non-`/metrics` endpoint is logged with method, path, status, IP, user-agent, and (if authenticated) user_id.
-- **Observability** — Prometheus scrapes `/metrics`, exposing both default HTTP metrics (`prometheus-fastapi-instrumentator`) and custom domain metrics (`dermscan_scan_total`, `dermscan_scan_confidence`, `dermscan_scan_latency_seconds`). A pre-built Grafana dashboard is in [`infra/grafana/dashboard.json`](infra/grafana/dashboard.json).
+Model weights are stored locally and not committed to the repository. To use a model, place the `.onnx` file in the `models/` directory.
 
 ---
 
