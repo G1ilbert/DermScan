@@ -50,13 +50,37 @@ def _softmax(x: np.ndarray) -> np.ndarray:
     return e / e.sum()
 
 
-def preprocess(image_bytes: bytes, size: int | None = None) -> tuple[np.ndarray, Image.Image]:
-    target = size or get_settings().model_input_size
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((target, target), Image.BILINEAR)
+def _sigmoid(x: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def _to_tensor(image: Image.Image) -> np.ndarray:
+    """PIL image → ImageNet-normalized NCHW float32 tensor."""
     arr = np.asarray(image, dtype=np.float32) / 255.0
     arr = (arr - IMAGENET_MEAN) / IMAGENET_STD
     arr = np.transpose(arr, (2, 0, 1))[None, ...]  # NCHW
-    return arr.astype(np.float32), image
+    return arr.astype(np.float32)
+
+
+def preprocess(image_bytes: bytes, size: int | None = None) -> tuple[np.ndarray, Image.Image]:
+    target = size or get_settings().model_input_size
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((target, target), Image.BILINEAR)
+    return _to_tensor(image), image
+
+
+def _tta_views(image: Image.Image) -> list[Image.Image]:
+    """Five Test Time Augmentation views.
+
+    Index 0 is the original orientation — callers that need an
+    aligned-to-input feature map (e.g. for GradCAM) should use that pass.
+    """
+    return [
+        image,
+        image.transpose(Image.Transpose.FLIP_LEFT_RIGHT),
+        image.transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+        image.transpose(Image.Transpose.ROTATE_90),    # +90° counter-clockwise
+        image.transpose(Image.Transpose.ROTATE_270),   # -90° (equivalently +270°)
+    ]
 
 
 def _model_available() -> bool:
@@ -114,7 +138,7 @@ def _gradcam_overlay(base: Image.Image, cam: np.ndarray) -> bytes:
 
 
 def run_inference(image_bytes: bytes) -> InferenceResult:
-    tensor, image = preprocess(image_bytes)
+    _, image = preprocess(image_bytes)
     session = _load_session()
 
     if session is None:
@@ -123,18 +147,30 @@ def run_inference(image_bytes: bytes) -> InferenceResult:
     else:
         try:
             input_name = session.get_inputs()[0].name
-            outputs = session.run(None, {input_name: tensor})
-            logits = outputs[0][0] if outputs[0].ndim == 2 else outputs[0]
-            probs = _softmax(np.asarray(logits, dtype=np.float32))
-            # GradCAM proper requires gradients; ONNX Runtime gives forward only.
-            # We approximate by using the second output (a feature map) if present,
-            # otherwise fall back to the mock CAM. Real deployments should export
-            # the model with the activation map as a second graph output.
-            if len(outputs) > 1:
-                feat = np.asarray(outputs[1])
-                cam = feat.mean(axis=tuple(range(feat.ndim - 2))) if feat.ndim >= 3 else np.ones((7, 7), dtype=np.float32)
-            else:
-                _, cam = _mock_prediction(image)
+            # Test Time Augmentation: run the model on five geometric views
+            # (identity, h-flip, v-flip, rot+90, rot-90), apply sigmoid to the
+            # logits of each, and average. This reduces orientation sensitivity
+            # — dermoscopy lesions have no canonical "up" — at the cost of 5×
+            # the inference latency. Note we use sigmoid (per-class binary)
+            # because the model was trained with BCEWithLogitsLoss; for a
+            # softmax/cross-entropy model swap _sigmoid for _softmax below.
+            sigmoid_probs: list[np.ndarray] = []
+            cam: np.ndarray | None = None
+            for i, view in enumerate(_tta_views(image)):
+                outputs = session.run(None, {input_name: _to_tensor(view)})
+                logits = outputs[0][0] if outputs[0].ndim == 2 else outputs[0]
+                sigmoid_probs.append(_sigmoid(np.asarray(logits, dtype=np.float32)))
+                # GradCAM only needs the original-orientation feature map —
+                # blending a rotated CAM back over an upright image misaligns
+                # the highlight region. We take the CAM from the first pass.
+                if i == 0:
+                    if len(outputs) > 1:
+                        feat = np.asarray(outputs[1])
+                        cam = feat.mean(axis=tuple(range(feat.ndim - 2))) if feat.ndim >= 3 else np.ones((7, 7), dtype=np.float32)
+                    else:
+                        _, cam = _mock_prediction(image)
+            probs = np.mean(np.stack(sigmoid_probs, axis=0), axis=0)
+            assert cam is not None  # set on i == 0
         except Exception:  # pragma: no cover - unexpected runtime error
             logger.exception("ONNX inference failed — using mock fallback")
             probs, cam = _mock_prediction(image)
