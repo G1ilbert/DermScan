@@ -24,6 +24,9 @@ os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 os.environ.setdefault("MODEL_PATH", "/tmp/no-such-model.onnx")
+# Pin confidence thresholds so tests don't depend on a local .env file.
+os.environ.setdefault("CONFIDENCE_THRESHOLD_HIGH", "0.60")
+os.environ.setdefault("CONFIDENCE_THRESHOLD_LOW", "0.45")
 
 import pytest_asyncio  # noqa: E402
 from sqlalchemy.dialects.postgresql import JSONB, UUID  # noqa: E402

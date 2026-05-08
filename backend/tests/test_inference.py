@@ -25,11 +25,12 @@ def test_preprocess_shape_and_range():
 def test_classify_band_thresholds():
     from app.worker.inference import classify_band
 
+    # HIGH = 0.60 (>= → "result"), LOW = 0.45 (>= → "uncertain"), else "low_quality"
     assert classify_band(0.95) == "result"
-    assert classify_band(0.90) == "result"
-    assert classify_band(0.80) == "uncertain"
-    assert classify_band(0.70) == "uncertain"
-    assert classify_band(0.69) == "low_quality"
+    assert classify_band(0.60) == "result"
+    assert classify_band(0.55) == "uncertain"
+    assert classify_band(0.45) == "uncertain"
+    assert classify_band(0.44) == "low_quality"
     assert classify_band(0.0) == "low_quality"
 
 

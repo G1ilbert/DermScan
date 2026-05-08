@@ -21,8 +21,8 @@ class Settings(BaseSettings):
 
     model_path: str = "/models/dermscan.onnx"
     model_input_size: int = 380
-    confidence_threshold_high: float = 0.90
-    confidence_threshold_low: float = 0.70
+    confidence_threshold_high: float = 0.60
+    confidence_threshold_low: float = 0.45
 
     cors_origins: str = "http://localhost:3000"
     max_upload_bytes: int = 10 * 1024 * 1024

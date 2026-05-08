@@ -76,8 +76,8 @@ Place an exported ONNX model at `models/dermscan.onnx`. If the file is absent, t
 | `R2_BUCKET` | R2 bucket name | `dermscan-images` |
 | `MODEL_PATH` | ONNX model location | `/models/dermscan.onnx` |
 | `MODEL_INPUT_SIZE` | input resolution | `380` |
-| `CONFIDENCE_THRESHOLD_HIGH` | `result` threshold | `0.90` |
-| `CONFIDENCE_THRESHOLD_LOW` | `uncertain` floor | `0.70` |
+| `CONFIDENCE_THRESHOLD_HIGH` | `result` threshold | `0.60` |
+| `CONFIDENCE_THRESHOLD_LOW` | `uncertain` floor | `0.45` |
 | `CORS_ORIGINS` | comma-separated allowed origins | `http://localhost:3000` |
 | `MAX_UPLOAD_BYTES` | image size cap | `10485760` |
 
