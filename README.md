@@ -1,16 +1,22 @@
 # DermScan
 
+[![Latest Release](https://img.shields.io/github/v/release/G1ilbert/DermScan)](https://github.com/G1ilbert/DermScan/releases)
+
 Production-grade AI skin lesion screening web app. Users upload a photo of a skin lesion and the system returns a confidence-gated risk assessment with a GradCAM attention heatmap. Designed for **pre-hospital screening** by the general public — never a substitute for a doctor.
 
 ---
 
 ## Model Versions
 
+See all model versions and changelogs in [GitHub Releases](https://github.com/G1ilbert/DermScan/releases).
+
+Latest:
+
 | Version | Architecture    | Image Size | AUC    | Accuracy | Melanoma Recall | Epochs          | Key Changes                                                                              |
 | ------- | --------------- | ---------- | ------ | -------- | --------------- | --------------- | ---------------------------------------------------------------------------------------- |
 | v1.0    | EfficientNet-B4 | 224×224    | 0.9316 | 90%      | 79%             | 14 (early stop) | Initial training, AdamW lr=1e-4→5e-5 resume, pos_weight=4.60, Mixup α=0.4, patience=6    |
 
-Model weights are stored locally and not committed to the repository. To use a model, place the `.onnx` file in the `models/` directory.
+Download the latest `dermscan.onnx` from the release assets and place it in `models/`.
 
 ---
 
