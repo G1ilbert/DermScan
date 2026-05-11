@@ -1,6 +1,9 @@
 import { Session, SupabaseClient, createClient } from "@supabase/supabase-js";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+// Trim any trailing slash so callers can append paths like `/scan` without
+// producing `//scan` — which is a different URL to FastAPI and was producing
+// 400-status CORS preflights in audit_logs against the live deploy.
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 

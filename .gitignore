@@ -54,5 +54,8 @@ coverage.xml
 # Docker
 *.pid
 
+# Docs (kept locally only)
+docs/
+
 models/*.onnx
 models/*.data
