@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     worker_poll_interval_s: float = 2.0
     worker_stuck_reset_after_s: int = 300
 
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "https://derm-scan.vercel.app,http://localhost:3000"
     max_upload_bytes: int = 10 * 1024 * 1024
 
     @property
