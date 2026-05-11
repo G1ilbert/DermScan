@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     app_port: int = 8000
 
     database_url: str = "postgresql+asyncpg://dermscan:dermscan@postgres:5432/dermscan"
-    redis_url: str = "redis://redis:6379/0"
 
     supabase_url: str = ""
     supabase_anon_key: str = ""
@@ -23,6 +22,10 @@ class Settings(BaseSettings):
     model_input_size: int = 380
     confidence_threshold_high: float = 0.60
     confidence_threshold_low: float = 0.45
+
+    # Polling worker (app/worker/tasks.py)
+    worker_poll_interval_s: float = 2.0
+    worker_stuck_reset_after_s: int = 300
 
     cors_origins: str = "http://localhost:3000"
     max_upload_bytes: int = 10 * 1024 * 1024

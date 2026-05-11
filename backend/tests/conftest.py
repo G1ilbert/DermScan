@@ -157,7 +157,7 @@ async def app_client() -> AsyncIterator:
 
 @pytest_asyncio.fixture(autouse=True)
 async def _stub_external_services(monkeypatch):
-    from app.services import scan_service, storage_service, supabase_client
+    from app.services import storage_service, supabase_client
 
     async def _upload(bucket, key, data, content_type="application/octet-stream"):
         return key
@@ -172,17 +172,8 @@ async def _stub_external_services(monkeypatch):
     monkeypatch.setattr(storage_service, "download", _download)
     monkeypatch.setattr(storage_service, "presign_get", _presign)
 
-    class _FakePool:
-        async def enqueue_job(self, *args, **kwargs):
-            return None
-
-        async def close(self):
-            return None
-
-    async def _create_pool(_settings):
-        return _FakePool()
-
-    monkeypatch.setattr(scan_service, "create_pool", _create_pool)
+    # No queue stub needed — create_scan just INSERTs and returns;
+    # the polling worker is started separately in production.
 
     # Single in-memory Supabase fake shared by both the dependency and the
     # auth router for the lifetime of one test.

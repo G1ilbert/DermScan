@@ -13,21 +13,11 @@ services:
       timeout: 5s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   api:
     build: ./backend
     env_file: ./backend/.env
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     volumes:
       - ./models:/models:ro
@@ -39,11 +29,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
       - ./models:/models:ro
-    command: ["arq", "app.worker.tasks.WorkerSettings"]
+    command: ["python", "-m", "app.worker.tasks"]
 
   frontend:
     build: ./frontend
