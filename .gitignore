@@ -53,6 +53,6 @@ coverage.xml
 
 # Docker
 *.pid
-docs/
+
 models/*.onnx
 models/*.data
