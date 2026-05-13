@@ -26,8 +26,10 @@ npm-debug.log*
 .env.*.local
 !.env.example
 
-# Models
+# Models — weights ship via GitHub Releases, not the repo
 models/*.onnx
+models/*.onnx.data
+models/*.data
 models/*.pt
 models/*.bin
 
@@ -56,6 +58,3 @@ coverage.xml
 
 # Docs (kept locally only)
 docs/
-
-models/*.onnx
-models/*.data
