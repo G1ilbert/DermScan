@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import ConfidenceGate from "@/components/ConfidenceGate";
@@ -68,6 +69,14 @@ export default function ResultPage() {
       {scan && scan.status === "done" && (
         <div className="mt-6">
           <ConfidenceGate scan={scan} />
+          <div className="mt-6 flex">
+            <Link
+              href="/"
+              className="inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Back to home
+            </Link>
+          </div>
         </div>
       )}
     </main>

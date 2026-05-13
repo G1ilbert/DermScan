@@ -1,7 +1,6 @@
 "use client";
 
 import type { ScanResult } from "@/lib/api";
-import { api } from "@/lib/api";
 import HeatmapOverlay from "./HeatmapOverlay";
 
 interface Props {
@@ -53,24 +52,6 @@ export default function ResultCard({ scan, dimmed = false }: Props) {
       )}
 
       <HeatmapOverlay imageUrl={scan.image_url} heatmapUrl={scan.heatmap_url} />
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <a
-          href={api.reportUrl(scan.scan_id)}
-          className="inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          download
-        >
-          Download PDF report
-        </a>
-        <a
-          href={api.fhirUrl(scan.scan_id)}
-          className="inline-flex rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-          target="_blank"
-          rel="noreferrer"
-        >
-          FHIR JSON
-        </a>
-      </div>
     </div>
   );
 }
