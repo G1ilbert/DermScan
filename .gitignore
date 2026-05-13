@@ -56,5 +56,3 @@ coverage.xml
 # Docker
 *.pid
 
-# Docs (kept locally only)
-docs/
